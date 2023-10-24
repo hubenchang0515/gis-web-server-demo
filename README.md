@@ -56,7 +56,7 @@ function App() {
         ],
 
         view: new View({
-          center: fromLonLat([85.71555979241059,33.677302290730594]),
+          center: fromLonLat([110, 35]),
           zoom: 4,
         }),
       });
