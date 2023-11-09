@@ -17,7 +17,7 @@ impl GisRect {
     }
 
     pub fn intersection(&self, rect:&GisRect) -> bool {
-        self.max.x <= rect.min.x || self.min.x >= rect.max.x || self.min.y <= rect.max.y || self.max.y >= rect.min.y
+        self.max.x > rect.min.x && self.max.y > rect.min.y && self.min.x < rect.max.x && self.min.y < rect.max.y
     }
 }
 
