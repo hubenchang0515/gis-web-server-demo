@@ -2,12 +2,11 @@ mod gis_net;
 mod gis_draw;
 mod gis_cache;
 
-use std::thread;
-
 use gis_net::gis_http::Router;
 use image::{Rgb, ImageOutputFormat};
 use crate::gis_net::gis_http::GisServer;
-use crate::gis_draw::gis_tile::{GisTile, GisXYZ, GisPoint, GisRect};
+use crate::gis_draw::gis_tile::{GisTile, GisXYZ};
+use crate::gis_draw::gis_proj::{GisPoint, GisRect};
 use crate::gis_net::gis_http::http;
 use crate::gis_cache::gis_sqlite::GisSqlite;
 
@@ -42,23 +41,9 @@ impl GisRouter {
             }
         }
 
-        router
-    }
+        router.sql.init();
 
-    fn init(&self) {
-        if !self.sql.init() {    
-            for z in 0..28 {
-                for x in 0..2u32.pow(z) {
-                    for y in 0..2u32.pow(z) {
-                        let mut tile = self.sql.get(x, y, z);
-                        if tile.len() == 0 {
-                            tile = self.draw_tile(&GisXYZ { x, y, z });
-                            self.sql.set(x, y, z, &tile);
-                        }
-                    } 
-                }
-            }
-        }
+        router
     }
 
     fn draw_tile(&self, index:&GisXYZ) -> Vec<u8> {
@@ -143,7 +128,6 @@ impl Router for GisRouter {
 fn main() {
     let addr = "localhost:1995";
     let router = GisRouter::new("tiles.sqlite");
-    router.init();
     println!("Start in {}", addr);
     GisServer::start(addr, &router);
 }
@@ -151,9 +135,9 @@ fn main() {
 fn gis_parse_pos(path:&str) -> Option<GisXYZ> {
     let exp = regex::Regex::new(r"/maps/(\d+)/(\d+)/(\d+)\.png").unwrap();
     if let Some(caps) = exp.captures(path) {
-        Some(GisXYZ{x:caps[2].parse::<u32>().unwrap(), 
-                y:caps[3].parse::<u32>().unwrap(), 
-                z:caps[1].parse::<u32>().unwrap()})
+        Some(GisXYZ{x:caps[2].parse::<u64>().unwrap(), 
+                y:caps[3].parse::<u64>().unwrap(), 
+                z:caps[1].parse::<u64>().unwrap()})
     } else {
         None
     }

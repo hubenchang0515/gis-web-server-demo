@@ -1,31 +1,13 @@
 use crate::gis_draw::gis_image::GisImage;
-use crate::gis_draw::gis_proj::{longitude_to_x, latitude_to_y};
-use imageproc::point::Point;
+use crate::gis_draw::gis_proj::{longitude_to_x, latitude_to_y, GisPoint, GisLine, GisRect};
+
 use image::{Rgb, ImageOutputFormat};
-
-pub type GisPoint = Point<f64>;
-
-pub struct GisRect {
-    pub min: GisPoint,
-    pub max: GisPoint,
-}
-
-#[allow(dead_code)]
-impl GisRect {
-    pub fn contains(&self, p:&GisPoint) -> bool {
-        self.min.x <= p.x && self.max.x > p.x && self.min.y <= p.y && self.max.y > p.y
-    }
-
-    pub fn intersection(&self, rect:&GisRect) -> bool {
-        self.max.x > rect.min.x && self.max.y > rect.min.y && self.min.x < rect.max.x && self.min.y < rect.max.y
-    }
-}
 
 #[allow(dead_code)]
 pub struct GisXYZ {
-    pub x:u32,
-    pub y:u32,
-    pub z:u32,
+    pub x:u64,
+    pub y:u64,
+    pub z:u64,
 }
 
 #[allow(dead_code)]
@@ -39,14 +21,15 @@ pub struct GisTile {
 impl GisTile {
     pub fn new(index:&GisXYZ) -> GisTile{
         let min = GisPoint{
-            x: (256 * index.x) as f64,
-            y: (256 * index.y) as f64,
+            x: (255 * index.x) as f64,
+            y: (255 * index.y) as f64,
         };
 
         let max = GisPoint{
-            x: (256 * index.x + 256) as f64,
-            y: (256 * index.y + 256) as f64,
+            x: (255 * index.x + 255) as f64,
+            y: (255 * index.y + 255) as f64,
         };
+
         GisTile{
             image: GisImage::new(256, 256),
             index: GisXYZ { x: index.x, y: index.y, z: index.z },
@@ -70,6 +53,13 @@ impl GisTile {
         latitude_to_y(y, self.index.z as f64)
     }
 
+    pub fn draw_border(&mut self, color:Rgb<u8>) {
+        self.image.draw_line(&GisPoint{x:0.0, y:0.0}, &GisPoint{x:255.0, y:0.0}, color);
+        self.image.draw_line(&GisPoint{x:255.0, y:0.0}, &GisPoint{x:255.0, y:255.0}, color);
+        self.image.draw_line(&GisPoint{x:255.0, y:255.0}, &GisPoint{x:0.0, y:255.0}, color);
+        self.image.draw_line(&GisPoint{x:0.0, y:255.0}, &GisPoint{x:0.0, y:0.0}, color);
+    }
+
     pub fn draw_line(&mut self, p1:&GisPoint, p2:&GisPoint, color:Rgb<u8>) {
         let p1 = GisPoint{
             x: self.longitude_to_x(p1.x) - self.rect.min.x,
@@ -80,7 +70,16 @@ impl GisTile {
             x: self.longitude_to_x(p2.x) - self.rect.min.x,
             y: self.latitude_to_y(p2.y) - self.rect.min.y,
         };
-        self.image.draw_line(&p1, &p2, color);
+
+        let line = GisLine{p1, p2};
+        let rect = GisRect{
+            min: GisPoint{x:0.0, y:0.0},
+            max: GisPoint{x:255.0, y:255.0},
+        };
+
+        if rect.cross(&line) {
+            self.image.draw_line(&p1, &p2, color);
+        }
     }
 
     pub fn draw_polygon(&mut self, polygon: &[GisPoint], color:Rgb<u8>) {

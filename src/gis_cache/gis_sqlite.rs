@@ -50,7 +50,7 @@ impl GisSqlite {
         table_exist
     }
 
-    pub fn get(&self, x:u32, y:u32, z:u32) -> Vec<u8> {
+    pub fn get(&self, x:u64, y:u64, z:u64) -> Vec<u8> {
         let query = "SELECT image FROM tiles WHERE x=? AND y=? AND z=?;";
         let mut state = self.conn.prepare(query).unwrap();
         state.bind(&[(1, x as i64), (2, y as i64), (3, z as i64)][..]).unwrap();
@@ -61,7 +61,7 @@ impl GisSqlite {
         }
     }
 
-    pub fn set(&self, x:u32, y:u32, z:u32, image:&Vec<u8>) {
+    pub fn set(&self, x:u64, y:u64, z:u64, image:&Vec<u8>) {
         let query = "INSERT INTO tiles VALUES (?, ?, ?, ?) ;";
         let mut state = self.conn.prepare(query).unwrap();
         state.bind::<&[(_, Value)]>(&[
